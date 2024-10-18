@@ -98,3 +98,6 @@ git pull origin main
 - [Hexed.it - Online Hex Editor](https://hexed.it/)
 ```
 
+
+ git config --global user.name "John Smith"
+ git config --global user.email "example@email.com"

@@ -4,10 +4,6 @@
 
 int main()
 {
-   if(readBootBlock() == OK){
-      printf("___ok____\n");
-   }else{
-      printf("___error____\n");
-   }
-   
+   status_t status = readBootBlock() ;
+
 }
