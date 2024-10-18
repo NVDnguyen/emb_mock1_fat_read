@@ -12,6 +12,8 @@
 #define SERIAL_NUMBER_SIZE 4
 #define FILESYSTEM_IDENTIFIER_SIZE 8
 #define BOOTSTRAP_REMAINDER_SIZE 448
+
+
 /*******************************************************************************
  * Struct Definitions
  ******************************************************************************/

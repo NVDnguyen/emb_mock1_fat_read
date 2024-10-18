@@ -5,5 +5,6 @@
 int main()
 {
    status_t status = readBootBlock() ;
+   printf("\n%s\n",status_strings[status]);
 
 }
