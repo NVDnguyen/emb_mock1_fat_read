@@ -3,9 +3,10 @@
 #include <string.h> 
 #include "fat_boot_reader.h"
 
-static BootBlockReader bootBlockReader;
+
 
 status_t readBootBlock() {
+    BootBlockReader bootBlockReader;
     status_t status = ERROR;
     FILE *f = fopen("data/floppy.img", "rb");
     
@@ -34,7 +35,6 @@ status_t readBootBlock() {
             bootBlock.total_blocks = (bootBlockReader.total_blocks1 | (bootBlockReader.total_blocks2 << 8));
             bootBlock.boot_signature = (bootBlockReader.boot_signature1 | (bootBlockReader.boot_signature2 << 8));
 
-            /*coppy*/
             bootBlock.blocks_per_allocation_unit = bootBlockReader.blocks_per_allocation_unit;
             bootBlock.reserved_blocks = bootBlockReader.reserved_blocks;
             bootBlock.num_fat = bootBlockReader.num_fat;

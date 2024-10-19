@@ -22,15 +22,20 @@ typedef struct
 {
     uint8_t bootstrap[BOOTSTRAP_SIZE];
     uint8_t manufacturer_desc[MANUFACTURER_DESC_SIZE];
+
     uint8_t bytes_per_block1;
     uint8_t bytes_per_block2;
+
     uint8_t blocks_per_allocation_unit; 
     uint16_t reserved_blocks; /*0x0E*/
     uint8_t num_fat;
+
     uint8_t root_dir_entries1;
     uint8_t root_dir_entries2;
+
     uint8_t total_blocks1;
     uint8_t total_blocks2;
+
     uint8_t media_descriptor;
     uint16_t blocks_per_fat;
     uint16_t blocks_per_track;
@@ -43,6 +48,7 @@ typedef struct
     uint8_t volume_label[VOLUME_LABEL_SIZE];
     uint8_t filesystem_identifier[FILESYSTEM_IDENTIFIER_SIZE];
     uint8_t bootstrap_remainder[BOOTSTRAP_REMAINDER_SIZE];
+    
     uint8_t boot_signature1;
     uint8_t boot_signature2;
 }  __attribute__((packed)) BootBlockReader;

@@ -6,7 +6,7 @@ SET INCLUDE_DIR=include
 @REM create build dir
 mkdir "%BUILD_DIR%" 2>nul
 
-@REM Compilation all *.c file in ---src--- folder
+@REM Compile  all *.c file in ---src--- folder
 gcc -std=gnu99 -o "%OUTPUT_NAME%" src\*.c || (echo "> Compilation failed!" & exit /b)
 
 @REM move to build folder  
