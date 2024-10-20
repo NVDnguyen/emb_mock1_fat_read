@@ -61,7 +61,7 @@ typedef struct
     uint8_t blocks_per_allocation_unit; 
     uint16_t reserved_blocks;
     uint8_t num_fat;
-    uint16_t root_dir_entries;
+    uint16_t num_root_dir_entries;
     uint16_t total_blocks;
     uint8_t media_descriptor;
     uint16_t blocks_per_fat;
@@ -80,14 +80,9 @@ typedef struct
 
 
 /*******************************************************************************
- * Global var
- ******************************************************************************/
-BootBlock bootBlock;
-
-/*******************************************************************************
  * This function
  ******************************************************************************/
-status_t readBootBlock();
-
+status_t readBootBlock(BootBlock *bootBlock);
+void printBootBlock(const BootBlock *bootBlock);
 
 #endif /* FAT_BOOT_READER_H */
