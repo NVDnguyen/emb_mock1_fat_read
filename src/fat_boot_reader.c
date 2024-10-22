@@ -8,15 +8,15 @@
 status_t readBootBlock(BootBlock *bootBlock) {
     BootBlockReader bootBlockReader;
     status_t status = ERROR;
-    FILE *f = fopen(PATH_FILE, "rb");
+    FILE *f = fopen(FILE_PATH, "rb");
     
     if (f != NULL) {
         /*Read the boot block into bootBlockReader*/ 
-        status = (fread(&bootBlockReader, sizeof(BootBlockReader), 1, f) != 1) ? READ_ERROR : OK;
+        status = (fread(&bootBlockReader, sizeof(BootBlockReader), 1, f) != 1) ? ERROR_READ : OK;
 
         /* Check Boot block 'signature'*/
         if (status == OK) {
-            status = (bootBlockReader.boot_signature2 != 0xAA) ? READ_ERROR : OK;
+            status = (bootBlockReader.boot_signature2 != 0xAA) ? ERROR_READ : OK;
         }
 
         /*Transfer data from bootBlockReader to bootBlock*/
@@ -49,7 +49,7 @@ status_t readBootBlock(BootBlock *bootBlock) {
         }
         fclose(f);
     } else {
-        status = FILE_NULL_ERROR;
+        status = ERROR_NULL_FILE;
     }
 
     return status;
