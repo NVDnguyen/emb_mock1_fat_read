@@ -1,22 +1,20 @@
 #ifndef STATUS_CODES_H
 #define STATUS_CODES_H
-
-#define PATH_FILE "data/floppy.img"
-
+#define FILE_PATH "data/floppy.img"
 typedef enum
 {
     ERROR,
     OK,
-    FILE_NULL_ERROR,
-    READ_ERROR,
-    MEMORY_ALLOCATION_ERROR
+    ERROR_NULL_FILE,
+    ERROR_READ,
+    ERROR_MEMORY_ALLOCATION
 } status_t;
 
 static const char* status_strings[] = {
     "ERROR",
     "OK",
-    "FILE_NULL_ERROR",
-    "READ_ERROR",
-    "MEMORY_ALLOCATION_ERROR"
+    "ERROR_NULL_FILE",
+    "ERROR_READ",
+    "ERROR_MEMORY_ALLOCATION"
 };
 #endif /*STATUS_CODES_H*/ 
