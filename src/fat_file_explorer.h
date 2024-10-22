@@ -27,5 +27,8 @@ typedef struct FileDate {
     uint8_t year : 7;        //  (0-119) 1980 to 2099
 } __attribute__((packed)) FileDate; /*size = 16bit*/
 
-status_t next_cluster(uint16_t startingCluster, BootBlock boot, uint8_t *arr);
+uint16_t next_cluster(uint16_t startingCluster, uint16_t seekOffset, FILE *f);
+void display_data(const BootBlock *boot, const DirectoryEntry *file);
+
+
 #endif /*_FAT_FILE_EXPLORER_*/

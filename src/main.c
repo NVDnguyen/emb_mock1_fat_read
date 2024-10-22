@@ -10,8 +10,7 @@ int main()
    status = readBootBlock(&boot) ;
    printf("\n%s\n",status_strings[status]);
    //printBootBlock(&boot);
-
-
+ 
    DirectoryEntry *dirEntries = NULL;
    status = readDirectoryEntry(&dirEntries,boot);
    printf("\n%s\n",status_strings[status]);

@@ -3,22 +3,14 @@
 #include <stdlib.h>
 #include "fat_file_explorer.h"
 
-status_t next_cluster(uint16_t startingCluster, BootBlock boot, uint8_t *arr)
-{
-    status_t status;
-    if (arr == NULL)
-    {
-        status = ERROR;
-    }
-    else
-    {
-        uint16_t nextCluster;
-        FILE *f = fopen(FILE_PATH,"rb");
-        if(f!=NULL){
-            // fs
-
-        }else{
-            status = ERROR_NULL_FILE;
-        }
-    }
+uint16_t next_cluster(uint16_t startingCluster, uint16_t seekOffset, FILE *f){
+    
+    // uint16_t hhh = 0x4200 + 0x200 * (entry->startingCluster - 0x0002);
+    fseek(f,seekOffset,SEEK_SET);
+    return 0;
 }
+void display_data(const BootBlock *boot, const DirectoryEntry *file){
+    uint16_t fatOffSet = (boot->bytes_per_block - 0x0002)+ file->startingCluster*(uint16_t)(boot->filesystem_identifier); 
+    
+}
+

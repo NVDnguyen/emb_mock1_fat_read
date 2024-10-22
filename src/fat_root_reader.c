@@ -20,11 +20,11 @@ status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
     if (f != NULL)
     {
         /* Point to the beginning of the root block */
-        uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * SIZE_BLOCK + SIZE_BLOCK;
-        printf("rootBlockStartOffset =0x%04X\n",rootBlockStartOffset);
-        printf("num_root_dir_entries = %u\n",bootBlock.num_root_dir_entries);
-        printf("size of struct = %u\n",sizeof(DirectoryEntry));
-        printf("start of data area = 0x%04X\n",(rootBlockStartOffset+bootBlock.num_root_dir_entries*sizeof(DirectoryEntry)));
+        uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * bootBlock.bytes_per_block + bootBlock.bytes_per_block;
+        // printf("rootBlockStartOffset =0x%04X\n",rootBlockStartOffset);
+        // printf("num_root_dir_entries = %u\n",bootBlock.num_root_dir_entries);
+        // printf("size of struct = %u\n",sizeof(DirectoryEntry));
+        // printf("start of data area = 0x%04X\n",(rootBlockStartOffset+bootBlock.num_root_dir_entries*sizeof(DirectoryEntry)));
         fseek(f, rootBlockStartOffset, SEEK_SET);
 
         /*Read each directory entry from the root block into dirEntries*/
