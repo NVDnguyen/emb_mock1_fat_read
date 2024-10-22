@@ -12,18 +12,19 @@ status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
         *dirEntries = (DirectoryEntry *)malloc(sizeof(DirectoryEntry) * bootBlock.num_root_dir_entries);
         if (*dirEntries == NULL)
         {
-            return MEMORY_ALLOCATION_ERROR;
+            return ERROR_MEMORY_ALLOCATION;
         }
     }
 
-    FILE *f = fopen(PATH_FILE, "rb");
+    FILE *f = fopen(FILE_PATH, "rb");
     if (f != NULL)
     {
         /* Point to the beginning of the root block */
-        uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * 512 + 512;
-        printf("rootBlockStartOffset = %u\n",rootBlockStartOffset);
+        uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * SIZE_BLOCK + SIZE_BLOCK;
+        printf("rootBlockStartOffset =0x%04X\n",rootBlockStartOffset);
         printf("num_root_dir_entries = %u\n",bootBlock.num_root_dir_entries);
         printf("size of struct = %u\n",sizeof(DirectoryEntry));
+        printf("start of data area = 0x%04X\n",(rootBlockStartOffset+bootBlock.num_root_dir_entries*sizeof(DirectoryEntry)));
         fseek(f, rootBlockStartOffset, SEEK_SET);
 
         /*Read each directory entry from the root block into dirEntries*/
@@ -42,7 +43,7 @@ status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
     }
     else
     {
-        status = FILE_NULL_ERROR;
+        status = ERROR_NULL_FILE;
     }
 
     return status;
@@ -54,7 +55,7 @@ void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
         return;
     }
 
-    for (uint16_t i = 0; i <4; i++) {
+    for (uint16_t i = 0; i <20; i++) {
         const DirectoryEntry *entry = &dirEntries[i]; 
 
         printf("Directory Entry %u:\n", i + 1); 
@@ -68,7 +69,10 @@ void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
         printf("\n");
         printf("Time: 0x%04X\n", entry->time);
         printf("Date: 0x%04X\n", entry->date);
-        printf("Starting Cluster: 0x%04X\n", entry->startingCluster);
+
+        uint16_t hhh = 0x4200 + 0x200 * (entry->startingCluster - 0x0002);
+
+        printf("Starting Cluster: 0x%04X - 0x%04X\n", entry->startingCluster,hhh);
         printf("File Size: 0x%08X bytes\n", entry->fileSize);
         printf("\n");  
     }
