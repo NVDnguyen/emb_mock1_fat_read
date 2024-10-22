@@ -3,9 +3,9 @@
 status_t readRoot(DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset, int *len)
 {
     status_t status = OK;
-    FILE *f = fopen(PATH_FILE, "rb");
+    FILE *f = fopen(FILE_PATH, "rb");
     if (f == NULL) {
-        return status; 
+        return ERROR_NULL_FILE; 
     }
 
     fseek(f, rootDirByteOffset, SEEK_SET);
