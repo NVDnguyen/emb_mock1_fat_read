@@ -8,6 +8,8 @@ typedef struct {
     char ext[3];          // Phần mở rộng tệp (3 ký tự)
     uint8_t attr;         // Thuộc tính tệp/thư mục
     uint8_t reserved[10]; // Dự trữ
+    uint16_t time;
+    uint16_t date;
     uint16_t firstCluster;// Cluster đầu tiên của tệp/thư mục
     uint32_t fileSize;    // Kích thước tệp (nếu là thư mục thì bằng 0)
 } DirectoryEntry;
