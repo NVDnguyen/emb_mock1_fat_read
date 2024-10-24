@@ -2,7 +2,6 @@
 #define STATUS_CODES_H
 
 #define FILE_PATH "data/floppy.img"
-#define SIZE_BLOCK 512
 typedef enum
 {
     ERROR,
