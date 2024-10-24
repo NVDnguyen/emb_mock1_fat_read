@@ -3,7 +3,7 @@
 #include "fat_boot_reader.h"
 #include "fat_root_reader.h"
 #include "fat_reader.h"
-
+#include "fat_readdata.h"
 
 int main()
 {
@@ -26,5 +26,7 @@ int main()
       printf("First Cluster: %d\n", arrentri[i].firstCluster);
       printf("File Size: %d bytes\n\n", arrentri[i].fileSize);
    }
-   printf("%x\n",read_fat12_entry(arrentri[0].firstCluster,boot.bytes_per_block,0));
+   int aa=read_fat12_entry(arrentri[0].firstCluster,boot.bytes_per_block,0);
+   uint32_t addata=(boot.blocks_per_fat*boot.num_fat+boot.num_root_dir_entries*32/512-1)*512;
+   status_t aaaa=print_data(addata+arrentri[0].firstCluster*512,512);
 }
