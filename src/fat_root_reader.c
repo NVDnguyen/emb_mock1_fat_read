@@ -3,17 +3,26 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+ParseTime parseTimeFromUint16(uint16_t rawTime) {
+    ParseTime time;
+    time.hours = (rawTime >> 11) & 0x1F;      // 5 bit từ bit 11-15
+    time.minutes = (rawTime >> 5) & 0x3F;     // 6 bit từ bit 5-10
+    time.seconds = rawTime & 0x1F;            // 5 bit từ bit 0-4 (mỗi giá trị là 2 giây)
+    return time;
+}
+ParseDate parseDateFromUint16(uint16_t rawDate) {
+    ParseDate date;
+    date.year = (rawDate >> 9) & 0x7F;        // 7 bit từ bit 9-15
+    date.month = (rawDate >> 5) & 0x0F;       // 4 bit từ bit 5-8
+    date.day = rawDate & 0x1F;                // 5 bit từ bit 0-4
+    return date;
+}
 status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
 {
     status_t status = OK;
     if (*dirEntries == NULL)
     {
-        *dirEntries = (DirectoryEntry *)malloc(sizeof(DirectoryEntry) * bootBlock.num_root_dir_entries);
-        if (*dirEntries == NULL)
-        {
-            return ERROR_MEMORY_ALLOCATION;
-        }
+        return ERROR_MEMORY_ALLOCATION;
     }
 
     FILE *f = fopen(FILE_PATH, "rb");
@@ -21,13 +30,8 @@ status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
     {
         /* Point to the beginning of the root block */
         uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * bootBlock.bytes_per_block + bootBlock.bytes_per_block;
-        // printf("rootBlockStartOffset =0x%04X\n",rootBlockStartOffset);
-        // printf("num_root_dir_entries = %u\n",bootBlock.num_root_dir_entries);
-        // printf("size of struct = %u\n",sizeof(DirectoryEntry));
-        // printf("start of data area = 0x%04X\n",(rootBlockStartOffset+bootBlock.num_root_dir_entries*sizeof(DirectoryEntry)));
+ 
         fseek(f, rootBlockStartOffset, SEEK_SET);
-
-        /*Read each directory entry from the root block into dirEntries*/
         uint8_t j=0;  /*real dir*/  
         for (uint8_t i = 0; i < bootBlock.num_root_dir_entries; i++)
         {
@@ -55,7 +59,7 @@ void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
         return;
     }
 
-    for (uint16_t i = 0; i <20; i++) {
+    for (uint16_t i = 0; i <1; i++) {
         const DirectoryEntry *entry = &dirEntries[i]; 
 
         printf("Directory Entry %u:\n", i + 1); 
@@ -77,4 +81,36 @@ void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
         printf("\n");  
     }
 }
+
+
+void display_all_file_info(const BootBlock *boot, DirectoryEntry **files, int fileCount) {
+    printf("%-12s  %-12s  %-15s  %-12s  %-8s\n", "Filename", "Date Modified", "Type", "Attribute", "Size");
+
+    for (int i = 0; i < fileCount; i++) {
+        DirectoryEntry *file = files[i];
+        ParseTime time = parseTimeFromUint16(file->time);
+        ParseDate date = parseDateFromUint16(file->date);
+        
+        printf("%-12s  %-02u/%02u/%04u  %-15s  ", 
+               file->filename, 
+               date.day, 
+               date.month, 
+               date.year + 1980,
+               "UNKNOWN");
+
+
+        int found = 0;
+        for (int j = 0; j < sizeof(attribute_strings) / sizeof(attribute_strings[0]); j++) {
+            if (file->attributes & (1 << j)) {
+                printf("%s ", attribute_strings[j]);
+                found = 1;
+            }
+        }
+        if (!found) {
+            printf("NONE");
+        }  
+        printf("  %u bytes\n", file->fileSize);
+    }
+}
+
 
