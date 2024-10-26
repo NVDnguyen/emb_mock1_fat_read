@@ -15,5 +15,7 @@ typedef struct {
 } DirectoryEntry;
 #pragma pop()
 status_t readRoot(DirectoryEntry *arr,uint16_t rootEntryCount,uint32_t rootDirByteOffset,int *len);
-
+status_t readFolder(DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset, int *len);
+void print_directory_entry(const DirectoryEntry *entry);
+void print_allentri(int lenentri,DirectoryEntry *arrentri);
 #endif

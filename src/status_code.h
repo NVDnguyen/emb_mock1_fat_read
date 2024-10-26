@@ -10,6 +10,14 @@ typedef enum
     ERROR_MEMORY_ALLOCATION,
 } status_t;
 
+typedef enum
+{
+    INFILE,
+    INFOLDER,
+    CLOSEE
+} state_t;
+
+
 static const char* status_strings[] = {
     "ERROR",
     "OK",
