@@ -47,4 +47,6 @@ uint8_t readRootEntry(FILE *f,DirectoryEntry *dirEntries,uint16_t num_root_dir_e
 uint8_t readFolder(FILE *f,DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset);
 void print_allentri( DirectoryEntry *arrentri,uint16_t size);
 void printAttributes(uint8_t attributes);
+
+
 #endif /*FAt_ROOT_READER_H*/

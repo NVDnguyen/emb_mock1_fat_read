@@ -86,4 +86,5 @@ typedef struct
 status_t readBootBlock(BootBlock *bootBlock,FILE *f);
 void printBootBlock(const BootBlock *bootBlock);
 
+status_t verifyFATTable(BootBlock *bootBlock,FILE *f);
 #endif /* FAT_BOOT_READER_H */

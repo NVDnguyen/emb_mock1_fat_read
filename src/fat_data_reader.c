@@ -7,8 +7,14 @@
 #define FAT32 "FAT32"
 
 /* Function to compare the last 5 characters of the filesystem identifier */
-int isFilesystemType(const char *identifier, const char *type) {
+uint8_t isFilesystemType(const char *identifier, const char *type) {
     return strncmp(identifier, type, 5) == 0;
+}
+status_t isClusterValid(uint32_t cluster,uint32_t endOfClusterMarker) {
+    if (cluster < 2 || cluster >= endOfClusterMarker) {
+        return ERROR;  
+    }
+    return OK;  
 }
 
 uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identifier){
@@ -54,7 +60,7 @@ uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identi
         fseek(f, NextIndexCluster_FAT(cluster, FAT32), SEEK_SET);
         uint32_t fat_entry;
         fread(&fat_entry, sizeof(uint32_t), 1, f);
-        result = fat_entry & 0x0FFFFFFF; /* Take only the first 28 bits */
+        result = fat_entry & 0x0FFFFFFF;
     }
 
     return result;
@@ -141,3 +147,4 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock)
     }
 }
 
+//------------------------------------------------
