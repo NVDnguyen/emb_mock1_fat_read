@@ -1,12 +1,7 @@
-#include "fat_data_reader.h"
+#include "fat_data_explorer.h"
 #include <string.h>
 #include <stdio.h>
-/* Define ASCII identifiers for FAT types */
-#define FAT12 "FAT12"
-#define FAT16 "FAT16"
-#define FAT32 "FAT32"
 
-/* Function to compare the last 5 characters of the filesystem identifier */
 uint8_t isFilesystemType(const char *identifier, const char *type)
 {
     return strncmp(identifier, type, 5) == 0;
@@ -116,7 +111,7 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
     uint32_t clusterSize = bootBlock.bytes_per_block;
 
     uint16_t currentFAT = 1;
-    uint32_t fatStartOffset = bootBlock.bytes_per_block ; /*first FAT table*/
+    uint32_t fatStartOffset = bootBlock.bytes_per_block; /*first FAT table*/
 
     uint32_t currentCluster = startCluster;
     uint32_t nextCluster;
@@ -165,7 +160,7 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
                 }
                 else
                 {
-                    fatStartOffset += bootBlock.bytes_per_block *bootBlock.blocks_per_fat;/*1,2,...*/
+                    fatStartOffset += bootBlock.bytes_per_block * bootBlock.blocks_per_fat; /*1,2,...*/
                     state = REGET;
                 }
             }
@@ -174,7 +169,112 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
                 currentCluster = nextCluster;
                 state = PROCESSING;
             }
-
         }
     }
+}
+void print_directory_entry(const DirectoryEntry *entry)
+{
+    // Print file name
+    char temp_name[9];
+    strncpy(temp_name, entry->filename, 8);
+    temp_name[8] = '\0';
+    printf("%-18s", temp_name);
+
+    // printf("%-18s", entry->name);
+    //  Print file extension
+    if (entry->extension[0] != 32)
+    {
+        printf("%-10s  ", entry->extension);
+    }
+    else
+    {
+        printf("            ");
+    }
+
+    // Print attributes
+    // printf("%-9s   ", attribute_strings[entry->attributes]);
+    printAttributes(entry->attributes);
+    printf("        ");
+    // Decode and print time
+    uint8_t seconds = (entry->time & 0x1F) * 2;
+    uint8_t minutes = (entry->time >> 5) & 0x3F;
+    uint8_t hours = (entry->time >> 11) & 0x1F;
+    printf("%02u:%02u:%02u     ", hours, minutes, seconds);
+
+    // Decode and print date
+    uint8_t day = entry->date & 0x1F;
+    uint8_t month = (entry->date >> 5) & 0x0F;
+    uint16_t year = ((entry->date >> 9) & 0x7F) + 1980;
+    printf("%02u/%02u/%04u", day, month, year);
+
+    // Print file size
+    printf("%10u bytes\n", entry->fileSize);
+}
+
+void print_allentri(DirectoryEntry *arrentri, uint16_t size)
+{
+    printf("File Name      Extension   Attributes      Time         Date           File Size\n");
+    printf("---------------------------------------------------------------------------------\n");
+
+    for (int i = 0; i < size; i++)
+    {
+        if (arrentri[i].filename[0] != 0 && arrentri[i].filename[0] != 0xe5 && arrentri[i].attributes != 0x0f)
+        {
+            //printf("%-8d", i + 1); // In chỉ số
+            print_directory_entry(&arrentri[i]);
+        }
+    }
+}
+void printAttributes(uint8_t attributes)
+{
+    switch (attributes)
+    {
+    case 0x01:
+        printf("r   ");
+        break;
+    case 0x02:
+        printf("hidden");
+        break;
+    case 0x04:
+        printf("s   ");
+        break;
+    case 0x08:
+        printf("vl  ");
+        break;
+    case 0x10:
+        printf("dir ");
+        break;
+    case 0x20:
+        printf("a   ");
+        break;
+    case 0x40:
+        printf("U1  ");
+        break;
+    case 0x80:
+        printf("U2");
+        break;
+    default:
+        printf(" -  ");
+        break;
+    }
+}
+
+status_t removeFile(DirectoryEntry dir, uint32_t offSet, uint16_t indexCluster, FILE *f)
+{
+    if (f == NULL) {
+        return ERROR_NULL_FILE;
+    }
+
+    if (fseek(f, offSet + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0) {
+        return ERROR_READ; 
+    }
+
+    dir.filename[0] = 0x00;
+
+    // Ghi lại DirectoryEntry đã cập nhật
+    if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1) {
+        return ERROR; 
+    }
+
+    return OK; 
 }

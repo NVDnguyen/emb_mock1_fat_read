@@ -43,9 +43,25 @@ static inline void printHeader(const char* title) {
 static inline void printFooter() {
     printf("\n====================================\n");
     setColor(BLUE, 0);
-    printf("  Press 0 to back screen\n");
-    printf("  Press Ctrl+C to quit\n");
+    printf("--'cd <file name>' to open\n");
+    printf("--'clean' to clean\n--'exit' to close program\n\n");
     setColor(DEFAULT, 0);
 }
+static inline void notifySuccess(const char *message) {
+    setColor(GREEN, BLACK);
+    printf("SUCCESS: %s\n", message);
+    setColor(DEFAULT, BLACK);
+}
 
+static inline void notifyWarning(const char *message) {
+    setColor(YELLOW, BLACK);
+    printf("WARNING: %s\n", message);
+    setColor(DEFAULT, BLACK);
+}
+
+static inline void notifyError(const char *message) {
+    setColor(RED, BLACK);
+    printf("ERROR: %s\n", message);
+    setColor(DEFAULT, BLACK);
+}
 #endif /*CONSOLE_UTILS_H*/ 

@@ -1,20 +1,21 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "fat_boot_reader.h"
 #include "fat_root_reader.h"
-#include "fat_data_reader.h"
+#include "fat_data_explorer.h"
 #include "console_utils.h"
-void print_control_instructions(State_t a);
 
+void sanitizeFilename(char *raw_name, char *clean_name, int length);
 
 int main()
 {
    /* Open the file system image in binary read mode */
-   FILE *f = fopen(FILE_PATH, "rb");
+   FILE *f = fopen(FILE_PATH, "rb+");
    if (f == NULL)
    {
-      perror("Failed to open the file");
+      notifyError("\nFailed to open the file.\n");
       return EXIT_FAILURE;
    }
 
@@ -24,7 +25,7 @@ int main()
    status = readBootBlock(&boot, f);
    if (status != OK)
    {
-      fprintf(stderr, "Error reading boot block.\n");
+      notifyError("\nError reading boot block.\n");
       fclose(f);
       return EXIT_FAILURE;
    }
@@ -32,13 +33,11 @@ int main()
    /* Verify that all copies of the FAT table are identical */
    if (verifyFATTable(&boot, f) == OK)
    {
-      setColor(YELLOW, BLACK);
-      printf("All FAT tables are consistent.\n");
-      setColor(WHITE, BLACK);
-   }else{
-      setColor(RED, BLACK);
-      printf("FAT tables are inconsistent.");
-      setColor(WHITE, BLACK);
+      notifySuccess("\nAll FAT tables are consistent.\n");
+   }
+   else
+   {
+      notifyError("\nFAT tables are inconsistent.\n");
    }
 
    /* Calculate addresses for data and root directory based on FAT configuration */
@@ -49,6 +48,7 @@ int main()
 
    /* Initialize the state to browse the root folder */
    State_t state = INFOLDER;
+   char current_path[256] = "/";
 
    /* Load and print entries in the root folder */
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
@@ -57,87 +57,113 @@ int main()
    printFooter();
 
    /* Display initial control instructions */
-   uint8_t choice;
-   print_control_instructions(state);
+   char command[100];
 
    while (state != EXIT)
    {
-      scanf("%d", &choice);
-      printf("<%d-%d>", choice, numEntry);
+      printf("%s> ", current_path);
+      fgets(command, sizeof(command), stdin);
 
-      switch (state)
+      /* =========================================== cd ==============================================*/
+      if (strncmp(command, "cd ", 3) == 0 || strncmp(command, "rm ", 3) == 0)
       {
-      case INFOLDER:
-         if (choice == 0)
+         char *dir_name = command + 3;
+         dir_name[strcspn(dir_name, "\n")] = 0;
+         int found = -1;
+         for (int i = 0; i < numEntry; i++)
          {
-            /* Exit the program */
-            state = EXIT;
-         }
-         else if (choice > 0 && choice <= numEntry)
-         {
-            /* Check if the selected entry is a file or folder */
-            if (dirEntries[choice - 1].attributes == 0x0)
+            char temp_name[9];
+            sanitizeFilename(dirEntries[i].filename, temp_name, 8);
+            if (strcmp(temp_name, dir_name) == 0)
             {
-               /* File selected: clear screen, display file content, and switch to INFILE state */
-               clearConsole();
-               setColor(GREEN, BLACK);
-               displayDataInFile(dirEntries[choice - 1].startingCluster, f, boot,dirEntries[choice - 1].fileSize);
-               setColor(WHITE, BLACK);
-               state = INFILE;
+               found = i;
+               break;
             }
-            else if (dirEntries[choice - 1].attributes == 0x10)
+         }
+
+         if (found != -1)
+         {
+            if (strncmp(command, "rm ", 3) == 0)
             {
-               /* Folder selected: clear screen, load folder contents */
-               clearConsole();
-               if (dirEntries[choice - 1].startingCluster == 0)
+               if (removeFile(dirEntries[found], adroot, found, f) == OK)
                {
-                  /* Root folder special case */
-                  adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
-                  numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+                  // if (dirEntries[found].startingCluster == 0)
+                  // {
+                  //    adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+                  //    numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+                  // }
+                  // else
+                  // {
+                  //    adroot = addata + dirEntries[found].startingCluster * boot.bytes_per_block;
+                  //    numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
+                  // }
+                  // print_allentri(dirEntries, numEntry);
+                  notifySuccess("\nRemove file successfully\n");
+
                }
                else
                {
-                  /* Regular subfolder, calculate its starting address */
-                  adroot = addata + dirEntries[choice - 1].startingCluster * boot.bytes_per_block;
-                  numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
+                  notifyError("\nFailed to remove this file.\n");
                }
-               /* Print all entries within the selected folder */
-               print_allentri(dirEntries, numEntry);
+            }
+            else
+            {
+               if (dirEntries[found].attributes == 0x0)
+               {
+                  clearConsole();
+                  setColor(GREEN, BLACK);
+                  displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
+                  setColor(WHITE, BLACK);
+                  printf("\n>'back' to clean and show last view:\n");
+               }
+               else if (dirEntries[found].attributes == 0x10)
+               {
+                  if (dirEntries[found].startingCluster == 0)
+                  {
+                     adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+                     numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+                     strcpy(current_path, "/");
+                  }
+                  else
+                  {
+
+                     adroot = addata + dirEntries[found].startingCluster * boot.bytes_per_block;
+                     numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
+                     /*update current path*/
+                     char temp_name[9];
+                     sanitizeFilename(dirEntries[found].filename, temp_name, 8);
+                     strcat(current_path, temp_name);
+                     strcat(current_path, "/");
+                  }
+                  print_allentri(dirEntries, numEntry);
+               }
             }
          }
-         break;
-
-      case INFILE:
-         if (choice == 0)
+         else
          {
-            clearConsole();
-            print_allentri(dirEntries, numEntry);
-            state = INFOLDER;
+            printf("Folder not found: %s\n", dir_name);
          }
-         break;
-
-      default:
-         printf("Invalid state.\n");
-         state = EXIT;
-         break;
       }
-
-      print_control_instructions(state);
+      else if (strcmp(command, "clean\n") == 0 || strcmp(command, "back\n") == 0)
+      {
+         clearConsole();
+         print_allentri(dirEntries, numEntry);
+      }
+      else if (strcmp(command, "exit\n") == 0)
+      {
+         state = EXIT;
+      }
    }
-
    fclose(f);
    return 0;
 }
-void print_control_instructions(State_t a)
+
+void sanitizeFilename(char *raw_name, char *clean_name, int length)
 {
-   printf("\n\n");
-   if (a == INFOLDER)
+   strncpy(clean_name, raw_name, length);
+   clean_name[length] = '\0';
+   for (int i = length - 1; i >= 0 && clean_name[i] == ' '; i--)
    {
-      printf("> 0: Stop program\n\n");
+      clean_name[i] = '\0';
    }
-   else if (a == INFILE)
-   {
-      printf("> 0: Exit file\n\n");
-   }
-   printf("\n>  ");
 }
