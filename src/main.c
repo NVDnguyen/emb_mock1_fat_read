@@ -79,16 +79,16 @@ int main()
             if (dirEntries[choice - 1].attributes == 0x0)
             {
                /* File selected: clear screen, display file content, and switch to INFILE state */
-               printf("\033[H\033[J");
+               clearConsole();
                setColor(GREEN, BLACK);
-               displayDataInFile(dirEntries[choice - 1].startingCluster, f, boot);
+               displayDataInFile(dirEntries[choice - 1].startingCluster, f, boot,dirEntries[choice - 1].fileSize);
                setColor(WHITE, BLACK);
                state = INFILE;
             }
             else if (dirEntries[choice - 1].attributes == 0x10)
             {
                /* Folder selected: clear screen, load folder contents */
-               printf("\033[H\033[J");
+               clearConsole();
                if (dirEntries[choice - 1].startingCluster == 0)
                {
                   /* Root folder special case */
@@ -110,7 +110,7 @@ int main()
       case INFILE:
          if (choice == 0)
          {
-            printf("\033[H\033[J");
+            clearConsole();
             print_allentri(dirEntries, numEntry);
             state = INFOLDER;
          }
@@ -133,11 +133,11 @@ void print_control_instructions(State_t a)
    printf("\n\n");
    if (a == INFOLDER)
    {
-      printf("0: Stop program\n\n");
+      printf("> 0: Stop program\n\n");
    }
    else if (a == INFILE)
    {
-      printf("0: Exit file\n\n");
+      printf("> 0: Exit file\n\n");
    }
    printf("\n>  ");
 }

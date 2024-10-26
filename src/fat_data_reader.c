@@ -7,24 +7,28 @@
 #define FAT32 "FAT32"
 
 /* Function to compare the last 5 characters of the filesystem identifier */
-uint8_t isFilesystemType(const char *identifier, const char *type) {
+uint8_t isFilesystemType(const char *identifier, const char *type)
+{
     return strncmp(identifier, type, 5) == 0;
 }
-status_t isClusterValid(uint32_t cluster,uint32_t endOfClusterMarker) {
-    if (cluster < 2 || cluster >= endOfClusterMarker) {
-        return ERROR;  
+status_t isClusterValid(uint32_t cluster, uint32_t endOfClusterMarker)
+{
+    if (cluster < 2 || cluster >= endOfClusterMarker)
+    {
+        return ERROR;
     }
-    return OK;  
+    return OK;
 }
 
-uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identifier){
+uint32_t getNextCluster(uint32_t cluster, uint32_t fatStartOffset, FILE *f, const char *filesystem_identifier)
+{
     uint32_t result = 0;
 
     if (isFilesystemType(filesystem_identifier, FAT12))
     {
         uint8_t str[2]; /* Store 2 bytes from the FAT */
         uint8_t str_hex[4];
-        fseek(f, NextIndexCluster_FAT(cluster, FAT12), SEEK_SET);
+        fseek(f, NextIndexCluster_FAT(cluster, fatStartOffset, FAT12), SEEK_SET);
 
         /* Read 2 bytes from the FAT */
         for (uint8_t i = 0; i < 2; i++)
@@ -50,14 +54,14 @@ uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identi
     }
     else if (isFilesystemType(filesystem_identifier, FAT16))
     {
-        fseek(f, NextIndexCluster_FAT(cluster, FAT16), SEEK_SET);
+        fseek(f, NextIndexCluster_FAT(cluster, fatStartOffset, FAT16), SEEK_SET);
         uint16_t fat_entry;
         fread(&fat_entry, sizeof(uint16_t), 1, f);
         result = fat_entry;
     }
     else if (isFilesystemType(filesystem_identifier, FAT32))
     {
-        fseek(f, NextIndexCluster_FAT(cluster, FAT32), SEEK_SET);
+        fseek(f, NextIndexCluster_FAT(cluster, fatStartOffset, FAT32), SEEK_SET);
         uint32_t fat_entry;
         fread(&fat_entry, sizeof(uint32_t), 1, f);
         result = fat_entry & 0x0FFFFFFF;
@@ -66,33 +70,27 @@ uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identi
     return result;
 }
 
-uint32_t NextIndexCluster_FAT(uint32_t cluster, const char *filesystem_identifier)
+uint32_t NextIndexCluster_FAT(uint32_t cluster, uint32_t fatStartOffset, const char *filesystem_identifier)
 {
     uint32_t result = 0;
     if (isFilesystemType(filesystem_identifier, FAT12))
     {
-        result = (cluster * 3 / 2) + 0x200;
+        result = (cluster * 3 / 2) + fatStartOffset;
     }
     else if (isFilesystemType(filesystem_identifier, FAT16))
     {
-        result = cluster * 2 + 0x200;
+        result = cluster * 2 + fatStartOffset;
     }
     else if (isFilesystemType(filesystem_identifier, FAT32))
     {
-        result = cluster * 4 + 0x200;
+        result = cluster * 4 + fatStartOffset;
     }
     return result;
 }
 
-void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock)
+void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint16_t fileSize)
 {
-    uint16_t dataBlockStartOffset =
-        (bootBlock.num_fat * bootBlock.blocks_per_fat + 1) * bootBlock.bytes_per_block +
-        bootBlock.num_root_dir_entries * 32;
 
-    uint32_t currentCluster = startCluster;
-    uint32_t nextCluster;
-    uint32_t clusterSize = bootBlock.bytes_per_block;
     uint32_t endOfClusterMarker;
 
     if (isFilesystemType(bootBlock.filesystem_identifier, FAT12))
@@ -109,42 +107,77 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock)
     }
     else
     {
-        printf("Unsupported filesystem type :: %s\n", bootBlock.filesystem_identifier);
         return;
     }
+    /**/
+    uint16_t dataBlockStartOffset =
+        (bootBlock.num_fat * bootBlock.blocks_per_fat + 1) * bootBlock.bytes_per_block +
+        bootBlock.num_root_dir_entries * 32;
+    uint32_t clusterSize = bootBlock.bytes_per_block;
 
-    while (1)
+    uint16_t currentFAT = 1;
+    uint32_t fatStartOffset = bootBlock.bytes_per_block + currentFAT; /*first FAT table*/
+
+    uint32_t currentCluster = startCluster;
+    uint32_t nextCluster;
+
+    uint32_t totalBytesRead = 0;
+    State_t state = PROCESSING;
+
+    while (state != EXIT)
     {
-        uint32_t dataOffset = dataBlockStartOffset + (currentCluster - 2) * clusterSize;
-        fseek(f, dataOffset, SEEK_SET);
-
-        uint8_t buffer[clusterSize];
-        fread(buffer, sizeof(uint8_t), clusterSize, f);
-
-        /* Display data from the cluster */
-        for (uint32_t i = 0; i < clusterSize; i++)
+        if (state == PROCESSING)
         {
-            if (buffer[i] == 0x1A) /* ctrl+z end of file */
+            uint32_t dataOffset = dataBlockStartOffset + (currentCluster - 2) * clusterSize;
+            fseek(f, dataOffset, SEEK_SET);
+
+            uint8_t buffer[clusterSize];
+            fread(buffer, sizeof(uint8_t), clusterSize, f);
+
+            /* Display data from the cluster */
+            for (uint32_t i = 0; i < clusterSize; i++)
             {
-                return;
+                if (totalBytesRead >= fileSize)
+                {
+                    state = EXIT;
+                    break;
+                }
+                printf("%c", buffer[i]);
+                totalBytesRead++;
+            }
+            printf("\n");
+        }
+
+        if (state != EXIT)
+        {
+
+            nextCluster = getNextCluster(currentCluster, fatStartOffset, f, bootBlock.filesystem_identifier);
+            
+            if (nextCluster >= endOfClusterMarker || nextCluster == currentCluster || nextCluster == 0x00)
+            {
+                //printf("\n currentFAT = %d > bootBlock.num_fat = %d : next= %02X\n ", currentFAT, bootBlock.num_fat, nextCluster);
+
+                currentFAT++;
+                if (currentFAT > bootBlock.num_fat)
+                {
+                    state = EXIT;
+                    break;
+                }
+                else
+                {
+                    fatStartOffset = clusterSize * currentFAT;
+                    state = REGET;
+                }
             }
             else
             {
-                printf("%c", buffer[i]);
+                currentCluster = nextCluster;
+                state = PROCESSING;
             }
-        }
-        printf("\n");
 
-        /* Get the next cluster from FAT */
-        nextCluster = getNextCluster(currentCluster, f, bootBlock.filesystem_identifier);
-
-        /* Check end of cluster threshold */
-        if (nextCluster >= endOfClusterMarker)
-        {
-            break;
+            /*if dont check FAT uncomment this*/
+            // currentCluster = nextCluster;
+            // state = PROCESSING;
         }
-        currentCluster = nextCluster;
     }
 }
-
-//------------------------------------------------

@@ -8,7 +8,9 @@ typedef enum
     ERROR_NULL_FILE,
     ERROR_READ,
     ERROR_MEMORY_ALLOCATION,
-    ERROR_UNSUPPORT_FILE_SYSTEM
+    ERROR_UNSUPPORT_FILE_SYSTEM,
+    OK_FAT,
+    ERROR_FAT
 } status_t;
 typedef enum State_t
 {
@@ -17,7 +19,9 @@ typedef enum State_t
    INFOLDER,
    INFILE,
    PROCESSING,
-   EXIT
+   EXIT,
+   REGET
+   
 } State_t;
 
 static const char* status_strings[] = {

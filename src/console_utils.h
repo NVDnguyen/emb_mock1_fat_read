@@ -22,7 +22,6 @@ static inline void setColor(int textColor, int bgColor) {
     SetConsoleTextAttribute(hConsole, (WORD)((bgColor << 4) | textColor));
 }
 
-// Hàm làm sạch màn hình
 static inline void clearConsole() {
 #ifdef _WIN32
     system("cls");
