@@ -116,7 +116,7 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
     uint32_t clusterSize = bootBlock.bytes_per_block;
 
     uint16_t currentFAT = 1;
-    uint32_t fatStartOffset = bootBlock.bytes_per_block + currentFAT; /*first FAT table*/
+    uint32_t fatStartOffset = bootBlock.bytes_per_block ; /*first FAT table*/
 
     uint32_t currentCluster = startCluster;
     uint32_t nextCluster;
@@ -152,10 +152,10 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
         {
 
             nextCluster = getNextCluster(currentCluster, fatStartOffset, f, bootBlock.filesystem_identifier);
-            
-            if (nextCluster >= endOfClusterMarker || nextCluster == currentCluster || nextCluster == 0x00)
+
+            if (nextCluster >= endOfClusterMarker || nextCluster == currentCluster || nextCluster == 0)
             {
-                //printf("\n currentFAT = %d > bootBlock.num_fat = %d : next= %02X\n ", currentFAT, bootBlock.num_fat, nextCluster);
+                printf("\n currentFAT = %d > bootBlock.num_fat = %d : next= %02X\n ", currentFAT, bootBlock.num_fat, nextCluster);
 
                 currentFAT++;
                 if (currentFAT > bootBlock.num_fat)
@@ -165,7 +165,7 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
                 }
                 else
                 {
-                    fatStartOffset = clusterSize * currentFAT;
+                    fatStartOffset += bootBlock.bytes_per_block *bootBlock.blocks_per_fat;/*1,2,...*/
                     state = REGET;
                 }
             }
