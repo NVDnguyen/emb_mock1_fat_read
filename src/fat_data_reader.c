@@ -11,8 +11,7 @@ int isFilesystemType(const char *identifier, const char *type) {
     return strncmp(identifier, type, 5) == 0;
 }
 
-uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identifier)
-{
+uint32_t getNextCluster(uint32_t cluster, FILE *f, const char *filesystem_identifier){
     uint32_t result = 0;
 
     if (isFilesystemType(filesystem_identifier, FAT12))

@@ -51,7 +51,7 @@ static inline void printHeader(const char* title) {
 static inline void printFooter() {
     printf("\n====================================\n");
     setColor(COLOR_LIGHT_BLUE, 0);
-    printf("  Press 0 to clear screen\n");
+    printf("  Press 0 to back screen\n");
     printf("  Press Ctrl+C to quit\n");
     setColor(COLOR_DEFAULT, 0);
 }

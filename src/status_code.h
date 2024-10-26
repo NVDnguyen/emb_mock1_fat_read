@@ -10,6 +10,15 @@ typedef enum
     ERROR_MEMORY_ALLOCATION,
     ERROR_UNSUPPORT_FILE_SYSTEM
 } status_t;
+typedef enum State_t
+{
+   START,
+   BACK,
+   INFOLDER,
+   INFILE,
+   PROCESSING,
+   EXIT
+} State_t;
 
 static const char* status_strings[] = {
     "ERROR",
@@ -21,7 +30,7 @@ static const char* status_strings[] = {
 };
 typedef enum
 {
-    NONE =0x00,
+    NONE = 0x00,
     FILE_ATTR_READ_ONLY = 0x01,
     FILE_ATTR_HIDDEN = 0x02,
     FILE_ATTR_SYSTEM = 0x04,
@@ -33,7 +42,7 @@ typedef enum
 } FileAttributes;
 
 static const char* attribute_strings[] = {
-    "NONE"
+    "NONE",
     "READ ONLY",
     "HIDDEN",
     "SYSTEM",
