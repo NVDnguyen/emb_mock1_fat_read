@@ -19,9 +19,7 @@ typedef enum State_t
    INFOLDER,
    INFILE,
    PROCESSING,
-   EXIT,
-   REGET
-   
+   EXIT   
 } State_t;
 
 static const char* status_strings[] = {

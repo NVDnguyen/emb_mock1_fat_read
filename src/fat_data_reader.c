@@ -175,9 +175,6 @@ void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint
                 state = PROCESSING;
             }
 
-            /*if dont check FAT uncomment this*/
-            // currentCluster = nextCluster;
-            // state = PROCESSING;
         }
     }
 }
