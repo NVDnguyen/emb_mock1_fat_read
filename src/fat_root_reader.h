@@ -49,11 +49,13 @@ typedef struct ParseDate
  *         - ERROR_READ if an error occurs while reading the data.
  *
  */
-status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock);
-
+// status_t readDirectoryEntry(DirectoryEntry **dirEntries,uint8_t *size, BootBlock bootBlock);
 void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size);
 ParseTime parseTimeFromUint16(uint16_t rawTime);
 ParseDate parseDateFromUint16(uint16_t rawTime);
-void display_all_file_info(const BootBlock *boot, DirectoryEntry **files, int fileCount);
+void printSingleDE(DirectoryEntry d);
+status_t readRootEntry(DirectoryEntry *dirEntries,FILE *f , BootBlock bootBlock);
+void printDirectoryEntries2(const DirectoryEntry *dirEntries, uint16_t size);
+void parseEntry(unsigned char *data, DirectoryEntry *entry);
 
 #endif /*FAt_ROOT_READER_H*/

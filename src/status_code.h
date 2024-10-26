@@ -21,6 +21,7 @@ static const char* status_strings[] = {
 };
 typedef enum
 {
+    NONE =0x00,
     FILE_ATTR_READ_ONLY = 0x01,
     FILE_ATTR_HIDDEN = 0x02,
     FILE_ATTR_SYSTEM = 0x04,
@@ -32,11 +33,12 @@ typedef enum
 } FileAttributes;
 
 static const char* attribute_strings[] = {
+    "NONE"
     "READ ONLY",
     "HIDDEN",
     "SYSTEM",
     "VOLUME LABEL",
-    "DIRECTORY",
+    "DIR",
     "ARCHIVE",
     "UNUSED 1",
     "UNUSED 2"

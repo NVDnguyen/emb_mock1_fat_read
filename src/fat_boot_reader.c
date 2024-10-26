@@ -5,10 +5,10 @@
 
 
 
-status_t readBootBlock(BootBlock *bootBlock) {
+status_t readBootBlock(BootBlock *bootBlock,FILE *f ) {
     BootBlockReader bootBlockReader;
     status_t status = ERROR;
-    FILE *f = fopen(FILE_PATH, "rb");
+
     
     if (f != NULL) {
         /*Read the boot block into bootBlockReader*/ 
@@ -47,7 +47,6 @@ status_t readBootBlock(BootBlock *bootBlock) {
             bootBlock->physical_drive_number = bootBlockReader.physical_drive_number;
             bootBlock->extended_boot_record_signature = bootBlockReader.extended_boot_record_signature;
         }
-        fclose(f);
     } else {
         status = ERROR_NULL_FILE;
     }

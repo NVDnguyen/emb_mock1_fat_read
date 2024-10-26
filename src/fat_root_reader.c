@@ -3,114 +3,223 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-ParseTime parseTimeFromUint16(uint16_t rawTime) {
+#include "console_utils.h" 
+ParseTime parseTimeFromUint16(uint16_t rawTime)
+{
     ParseTime time;
-    time.hours = (rawTime >> 11) & 0x1F;      // 5 bit từ bit 11-15
-    time.minutes = (rawTime >> 5) & 0x3F;     // 6 bit từ bit 5-10
-    time.seconds = rawTime & 0x1F;            // 5 bit từ bit 0-4 (mỗi giá trị là 2 giây)
+    time.hours = (rawTime >> 11) & 0x1F;  // 5 bit từ bit 11-15
+    time.minutes = (rawTime >> 5) & 0x3F; // 6 bit từ bit 5-10
+    time.seconds = rawTime & 0x1F;        // 5 bit từ bit 0-4 (mỗi giá trị là 2 giây)
     return time;
 }
-ParseDate parseDateFromUint16(uint16_t rawDate) {
+ParseDate parseDateFromUint16(uint16_t rawDate)
+{
     ParseDate date;
-    date.year = (rawDate >> 9) & 0x7F;        // 7 bit từ bit 9-15
-    date.month = (rawDate >> 5) & 0x0F;       // 4 bit từ bit 5-8
-    date.day = rawDate & 0x1F;                // 5 bit từ bit 0-4
+    date.year = (rawDate >> 9) & 0x7F;  // 7 bit từ bit 9-15
+    date.month = (rawDate >> 5) & 0x0F; // 4 bit từ bit 5-8
+    date.day = rawDate & 0x1F;          // 5 bit từ bit 0-4
     return date;
 }
-status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
-{
-    status_t status = OK;
-    if (*dirEntries == NULL)
-    {
-        return ERROR_MEMORY_ALLOCATION;
-    }
 
-    FILE *f = fopen(FILE_PATH, "rb");
+status_t readRootEntry(DirectoryEntry *dirEntries,FILE *f , BootBlock bootBlock)
+{
+    uint8_t size=0; 
+ 
     if (f != NULL)
     {
+
         /* Point to the beginning of the root block */
         uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * bootBlock.bytes_per_block + bootBlock.bytes_per_block;
- 
+
         fseek(f, rootBlockStartOffset, SEEK_SET);
-        uint8_t j=0;  /*real dir*/  
+        uint8_t j = 0; /*real dir*/
         for (uint8_t i = 0; i < bootBlock.num_root_dir_entries; i++)
         {
-            DirectoryEntry dir ;
+            DirectoryEntry dir;
             fread(&dir, sizeof(DirectoryEntry), 1, f);
-            if(dir.attributes != 0x0F){
-                (*dirEntries)[j] = dir;
+            if (dir.attributes != 0x0F && (strcmp(dir.filename, "") != 0 || dir.fileSize != 0))
+            {
+                (dirEntries)[j] = dir;
                 j++;
-            }/*else it is long file name*/
+            } /*else it is long file name*/
         }
+        size = j;
 
-        fclose(f);
+       
     }
-    else
-    {
-        status = ERROR_NULL_FILE;
-    }
-
-    return status;
+    return size;
+   
 }
 
-void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
-    if (dirEntries == NULL) {
+void printSingleDE(DirectoryEntry d)
+{
+    // Parse time and date from entry
+    ParseTime time = parseTimeFromUint16(d.time);
+    ParseDate date = parseDateFromUint16(d.date);
+
+    // Print serial number, filename, extension, date, and time
+    printf("%-20s  %-8s  %-02u/%02u/%04u       %-02u:%02u:%02u  ",
+           d.filename,
+           d.extension,
+           date.day,
+           date.month,
+           date.year + 1980,
+           time.hours,
+           time.minutes,
+           time.seconds * 2);
+
+    // Print file attributes
+    int found = 0;
+    for (int j = 0; j < sizeof(attribute_strings) / sizeof(attribute_strings[0]); j++)
+    {
+        if (d.attributes & (1 << j))
+        {
+            printf("    %s ", attribute_strings[j]);
+            found = 1;
+        }
+    }
+    if (!found)
+    {
+        printf("    NONE");
+    }
+
+    // Print file size
+    printf("        %-10u\n", d.fileSize);
+}
+
+void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size)
+{
+    if (dirEntries == NULL)
+    {
         printf("No directory entries to print.\n");
         return;
     }
 
-    for (uint16_t i = 0; i <1; i++) {
-        const DirectoryEntry *entry = &dirEntries[i]; 
+    // Print header with better alignment
+    printf("%-5s  %-20s  %-8s  %-15s  %-8s  %-12s  %-10s\n",
+           "No.", "Filename", "Extension", "Date Modified", "Time", "Attribute", "Size");
 
-        printf("Directory Entry %u:\n", i + 1); 
-        printf("Filename: %.8s\n", entry->filename);
-        printf("Extension: %.3s\n", entry->extension);
-        printf("Attributes: 0x%02X\n", entry->attributes);
-        printf("Reserved: ");
-        for (size_t j = 0; j < RESERVED_LENGTH; j++) {
-            printf("%02X ", entry->reserved[j]);
-        }
-        printf("\n");
-        printf("Time: 0x%04X\n", entry->time);
-        printf("Date: 0x%04X\n", entry->date);
+    // Print a separator line
+    printf("%-5s  %-20s  %-8s  %-15s  %-8s  %-12s  %-10s\n",
+           "----", "--------------------", "--------", "---------------", "--------", "------------", "----------");
 
-        uint16_t hhh = 0x4200 + 0x200 * (entry->startingCluster - 0x0002);
+    for (uint16_t i = 0; i < size; i++)
+    {
+        const DirectoryEntry *entry = &dirEntries[i];
 
-        printf("Starting Cluster: 0x%04X - 0x%04X\n", entry->startingCluster,hhh);
-        printf("File Size: 0x%08X bytes\n", entry->fileSize);
-        printf("\n");  
-    }
-}
+        // Parse time and date from entry
+        ParseTime time = parseTimeFromUint16(entry->time);
+        ParseDate date = parseDateFromUint16(entry->date);
 
-
-void display_all_file_info(const BootBlock *boot, DirectoryEntry **files, int fileCount) {
-    printf("%-12s  %-12s  %-15s  %-12s  %-8s\n", "Filename", "Date Modified", "Type", "Attribute", "Size");
-
-    for (int i = 0; i < fileCount; i++) {
-        DirectoryEntry *file = files[i];
-        ParseTime time = parseTimeFromUint16(file->time);
-        ParseDate date = parseDateFromUint16(file->date);
-        
-        printf("%-12s  %-02u/%02u/%04u  %-15s  ", 
-               file->filename, 
-               date.day, 
-               date.month, 
+        // Print serial number, filename, extension, date, and time
+        printf("%-5u  %-20s  %-8s  %-02u/%02u/%04u       %-02u:%02u:%02u  ",
+               i + 1, // Serial number starts from 1
+               entry->filename,
+               entry->extension,
+               date.day,
+               date.month,
                date.year + 1980,
-               "UNKNOWN");
+               time.hours,
+               time.minutes,
+               time.seconds * 2 // Convert seconds from 0-29 to real seconds (0-58)
+        );
 
-
+        // Print file attributes
         int found = 0;
-        for (int j = 0; j < sizeof(attribute_strings) / sizeof(attribute_strings[0]); j++) {
-            if (file->attributes & (1 << j)) {
-                printf("%s ", attribute_strings[j]);
+        for (int j = 0; j < sizeof(attribute_strings) / sizeof(attribute_strings[0]); j++)
+        {
+            if (entry->attributes & (1 << j))
+            {
+                printf("    %s ", attribute_strings[j]);
                 found = 1;
             }
         }
-        if (!found) {
-            printf("NONE");
-        }  
-        printf("  %u bytes\n", file->fileSize);
+        if (!found)
+        {
+            printf("    NONE");
+        }
+
+        // Print file size
+        printf("        %-10u\n", entry->fileSize);
     }
 }
 
+void printDirectoryEntries2(const DirectoryEntry *dirEntries, uint16_t size)
+{
+    if (dirEntries == NULL)
+    {
+        setColor(COLOR_LIGHT_RED, COLOR_BLACK);
+        printf("No directory entries to print.\n");
+        setColor(COLOR_DEFAULT, COLOR_BLACK);
+        return;
+    }
 
+    // Print header with better alignment
+    setColor(COLOR_LIGHT_CYAN, COLOR_BLACK);
+    printf("%-5s  %-20s  %-8s  %-15s  %-8s  %-12s  %-10s\n",
+           "No.", "Filename", "Extension", "Date Modified", "Time", "Attribute", "Size");
+
+    // Print a separator line
+    setColor(COLOR_LIGHT_GRAY, COLOR_BLACK);
+    printf("%-5s  %-20s  %-8s  %-15s  %-8s  %-12s  %-10s\n",
+           "----", "--------------------", "--------", "---------------", "--------", "------------", "----------");
+    setColor(COLOR_DEFAULT, COLOR_BLACK);
+
+    for (uint16_t i = 0; i < size; i++)
+    {
+        const DirectoryEntry *entry = &dirEntries[i];
+
+        // Parse time and date from entry
+        ParseTime time = parseTimeFromUint16(entry->time);
+        ParseDate date = parseDateFromUint16(entry->date);
+
+        // Print serial number, filename, extension, date, and time
+        setColor(COLOR_LIGHT_GREEN, COLOR_BLACK);
+        printf("%-5u", i + 1); // Serial number starts from 1
+
+        setColor(COLOR_YELLOW, COLOR_BLACK);
+        printf("  %-20s", entry->filename);
+        printf("  %-8s", entry->extension);
+
+        setColor(COLOR_LIGHT_CYAN, COLOR_BLACK);
+        printf("  %02u/%02u/%04u", date.day, date.month, date.year + 1980);
+        printf("       %02u:%02u:%02u", time.hours, time.minutes, time.seconds * 2);
+
+        // Print file attributes
+        setColor(COLOR_LIGHT_MAGENTA, COLOR_BLACK);
+        int found = 0;
+        for (int j = 0; j < sizeof(attribute_strings) / sizeof(attribute_strings[0]); j++)
+        {
+            if (entry->attributes & (1 << j))
+            {
+                printf("    %s ", attribute_strings[j]);
+                found = 1;
+            }
+        }
+        if (!found)
+        {
+            printf("    NONE");
+        }
+
+        // Print file size
+        setColor(COLOR_LIGHT_BLUE, COLOR_BLACK);
+        printf("        %-10u B\n", entry->fileSize);
+    }
+
+    // Reset color to default
+    setColor(COLOR_DEFAULT, COLOR_BLACK);
+}
+
+void parseEntry(unsigned char *data, DirectoryEntry *entry) {
+    memcpy(entry->filename, data, FILENAME_LENGTH);
+
+    memcpy(entry->extension, data + FILENAME_LENGTH, EXTENSION_LENGTH);
+
+    entry->attributes = data[FILENAME_LENGTH + EXTENSION_LENGTH + 11];
+    memcpy(entry->reserved, data + FILENAME_LENGTH + EXTENSION_LENGTH + 12, RESERVED_LENGTH);
+    
+    entry->time = *(uint16_t *)(data + FILENAME_LENGTH + EXTENSION_LENGTH + 12 + RESERVED_LENGTH);
+    entry->date = *(uint16_t *)(data + FILENAME_LENGTH + EXTENSION_LENGTH + 12 + RESERVED_LENGTH + 2);
+    entry->startingCluster = *(uint16_t *)(data + FILENAME_LENGTH + EXTENSION_LENGTH + 12 + RESERVED_LENGTH + 4);
+    entry->fileSize = *(uint32_t *)(data + FILENAME_LENGTH + EXTENSION_LENGTH + 12 + RESERVED_LENGTH + 6);
+}
