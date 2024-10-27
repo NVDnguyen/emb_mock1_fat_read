@@ -54,7 +54,7 @@ int main()
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
    uint8_t numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
    print_allentri(dirEntries, numEntry);
-   printFooter();
+   printIntruction();
 
    /* Display initial control instructions */
    char command[100];
@@ -68,9 +68,11 @@ int main()
       /* =========================================== cd ==============================================*/
       if (strncmp(command, "cd ", 3) == 0 || strncmp(command, "rm ", 3) == 0)
       {
+
+         int found = -1;
+
          char *dir_name = command + 3;
          dir_name[strcspn(dir_name, "\n")] = 0;
-         int found = -1;
          for (int i = 0; i < numEntry; i++)
          {
             char temp_name[9];
@@ -99,11 +101,7 @@ int main()
             {
                if (dirEntries[found].attributes == 0x0)
                {
-                  clearConsole();
-                  setColor(GREEN, BLACK);
-                  displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
-                  setColor(WHITE, BLACK);
-                  printf("\n>'back' to exit file\n");
+                  notifyWarning("Not directory! Use nano to open this file.");
                }
                else if (dirEntries[found].attributes == 0x10)
                {
@@ -147,8 +145,42 @@ int main()
          }
          else
          {
-            printf("Folder not found: %s\n", dir_name);
+            notifyWarning("Folder not found !!");
          }
+      }
+      else if (strncmp(command, "nano ", 5) == 0)
+      {
+         int found = -1;
+
+         char *dir_name = command + 5;
+         dir_name[strcspn(dir_name, "\n")] = 0;
+         for (int i = 0; i < numEntry; i++)
+         {
+            char temp_name[9];
+            sanitizeFilename(dirEntries[i].filename, temp_name, 8);
+            if (strcmp(temp_name, dir_name) == 0)
+            {
+               found = i;
+               break;
+            }
+         }
+
+         if (found != -1)
+         {
+            if (dirEntries[found].attributes == 0x0)
+            {
+               clearConsole();
+               setColor(GREEN, BLACK);
+               displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
+               setColor(WHITE, BLACK);
+               printf("\n>'back' to exit file\n");
+            }else{
+               notifyWarning("It is not a file to open !!");
+            }
+         }
+      }
+      else if(strcmp(command, "help\n") == 0 ){
+         printIntruction();
       }
       else if (strcmp(command, "clean\n") == 0 || strcmp(command, "back\n") == 0)
       {

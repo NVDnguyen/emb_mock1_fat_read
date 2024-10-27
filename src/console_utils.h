@@ -40,12 +40,12 @@ static inline void printHeader(const char *title)
     setColor(DEFAULT, 0);
 }
 
-static inline void printFooter()
+static inline void printIntruction()
 {
     printf("\n====================================\n");
     setColor(BLUE, 0);
-    printf("--'cd <file name>' to open\n");
-    printf("--'clean' to clean\n--'exit' to close program\n\n");
+    printf("--'cd <dir name>' to open folder\n--'rm <dir name>' to remove\n--'nano <file name>' to open file\n");
+    printf("--'clean' to clean\n--'exit' to close program\n--'help' to open list command\n\n");
     setColor(DEFAULT, 0);
 }
 static inline void notifySuccess(const char *message)
