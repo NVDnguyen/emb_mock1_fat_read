@@ -25,18 +25,26 @@ typedef struct DirectoryEntry{
     uint32_t fileSize;
 } __attribute__((packed)) DirectoryEntry;
 
+typedef struct ParseTime
+{
+    uint8_t hours : 5;   /*0-23*/
+    uint8_t minutes : 6; /*0-59*/
+    uint8_t seconds : 5; /*0-29 (0-58)*/
+} __attribute__((packed)) ParseTime; /*size = 16bit*/
 
-/*
- * @param dirEntries Array of DirectoryEntry elements to store array of information about files/directories read from the root directory.
- * @param bootBlock BootBlock structure containing information from the boot block of the file system, used to determine the location and size of the root directory.
- *
- * @return status_t
- *         - OK if the read operation is successful.
- *         - ERROR_NULL_FILE if the file cannot be opened.
- *         - ERROR_READ if an error occurs while reading the data.
- *
- */
-status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock);
-void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size);
+typedef struct ParseDate
+{
+    uint8_t year : 7;  /* (0-119) 1980 to 2099*/
+    uint8_t month : 4; /* 1-12*/
+    uint8_t day : 5;   /*1-31*/
+
+} __attribute__((packed)) ParseDate; /*size = 16bit*/
+
+
+ParseTime parseTimeFromUint16(uint16_t rawTime);
+ParseDate parseDateFromUint16(uint16_t rawTime);
+uint8_t readRootEntry(FILE *f,DirectoryEntry *dirEntries,uint16_t num_root_dir_entries, uint32_t adroot);
+uint8_t readFolder(FILE *f,DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset);
+
 
 #endif /*FAt_ROOT_READER_H*/

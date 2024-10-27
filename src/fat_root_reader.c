@@ -3,78 +3,63 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-status_t readDirectoryEntry(DirectoryEntry **dirEntries, BootBlock bootBlock)
+#include "console_utils.h"
+ParseTime parseTimeFromUint16(uint16_t rawTime)
 {
-    status_t status = OK;
-    if (*dirEntries == NULL)
-    {
-        *dirEntries = (DirectoryEntry *)malloc(sizeof(DirectoryEntry) * bootBlock.num_root_dir_entries);
-        if (*dirEntries == NULL)
-        {
-            return ERROR_MEMORY_ALLOCATION;
-        }
-    }
-
-    FILE *f = fopen(FILE_PATH, "rb");
+    ParseTime time;
+    time.hours = (rawTime >> 11) & 0x1F;
+    time.minutes = (rawTime >> 5) & 0x3F;
+    time.seconds = rawTime & 0x1F;
+    return time;
+}
+ParseDate parseDateFromUint16(uint16_t rawDate)
+{
+    ParseDate date;
+    date.year = (rawDate >> 9) & 0x7F;
+    date.month = (rawDate >> 5) & 0x0F;
+    date.day = rawDate & 0x1F;
+    return date;
+}
+uint8_t readRootEntry(FILE *f, DirectoryEntry *dirEntries, uint16_t num_root_dir_entries, uint32_t adroot)
+{
+    uint8_t j = 0; /*real dir*/
     if (f != NULL)
     {
-        /* Point to the beginning of the root block */
-        uint16_t rootBlockStartOffset = bootBlock.num_fat * bootBlock.blocks_per_fat * bootBlock.bytes_per_block + bootBlock.bytes_per_block;
-        printf("rootBlockStartOffset =0x%04X\n",rootBlockStartOffset);
-        printf("num_root_dir_entries = %u\n",bootBlock.num_root_dir_entries);
-        printf("size of struct = %u\n",sizeof(DirectoryEntry));
-        printf("start of data area = 0x%04X\n",(rootBlockStartOffset+bootBlock.num_root_dir_entries*sizeof(DirectoryEntry)));
-        fseek(f, rootBlockStartOffset, SEEK_SET);
+        fseek(f, adroot, SEEK_SET);
 
-        /*Read each directory entry from the root block into dirEntries*/
-        uint8_t j=0;  /*real dir*/  
-        for (uint8_t i = 0; i < bootBlock.num_root_dir_entries; i++)
+        for (uint8_t i = 0; i < num_root_dir_entries; i++)
         {
-            DirectoryEntry dir ;
+            DirectoryEntry dir;
             fread(&dir, sizeof(DirectoryEntry), 1, f);
-            if(dir.attributes != 0x0F){
-                (*dirEntries)[j] = dir;
-                j++;
-            }/*else it is long file name*/
+
+            (dirEntries)[j] = dir;
+            j++;
         }
-
-        fclose(f);
     }
-    else
-    {
-        status = ERROR_NULL_FILE;
-    }
-
-    return status;
+    return j;
 }
 
-void printDirectoryEntries(const DirectoryEntry *dirEntries, uint16_t size) {
-    if (dirEntries == NULL) {
-        printf("No directory entries to print.\n");
-        return;
-    }
+uint8_t readFolder(FILE *f, DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset)
+{
+    uint8_t len = 0;
+    status_t status = OK;
 
-    for (uint16_t i = 0; i <20; i++) {
-        const DirectoryEntry *entry = &dirEntries[i]; 
+    fseek(f, rootDirByteOffset, SEEK_SET);
+    DirectoryEntry entry;
 
-        printf("Directory Entry %u:\n", i + 1); 
-        printf("Filename: %.8s\n", entry->filename);
-        printf("Extension: %.3s\n", entry->extension);
-        printf("Attributes: 0x%02X\n", entry->attributes);
-        printf("Reserved: ");
-        for (size_t j = 0; j < RESERVED_LENGTH; j++) {
-            printf("%02X ", entry->reserved[j]);
+    for (int i = 0; i < rootEntryCount; i++)
+    {
+        (len)++;
+        fread(&entry, 32, 1, f);
+
+        if (entry.filename[0] == 0x00 || entry.filename[0] == 0xE5 || entry.attributes == 0x0F)
+        {
+            (len)--;
+            continue;
         }
-        printf("\n");
-        printf("Time: 0x%04X\n", entry->time);
-        printf("Date: 0x%04X\n", entry->date);
-
-        uint16_t hhh = 0x4200 + 0x200 * (entry->startingCluster - 0x0002);
-
-        printf("Starting Cluster: 0x%04X - 0x%04X\n", entry->startingCluster,hhh);
-        printf("File Size: 0x%08X bytes\n", entry->fileSize);
-        printf("\n");  
+        arr[len - 1] = entry;
     }
+
+    return len;
 }
 

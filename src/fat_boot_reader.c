@@ -1,14 +1,15 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h> 
+#include <stdlib.h>
 #include "fat_boot_reader.h"
 
 
 
-status_t readBootBlock(BootBlock *bootBlock) {
+status_t readBootBlock(BootBlock *bootBlock,FILE *f ) {
     BootBlockReader bootBlockReader;
     status_t status = ERROR;
-    FILE *f = fopen(FILE_PATH, "rb");
+
     
     if (f != NULL) {
         /*Read the boot block into bootBlockReader*/ 
@@ -47,7 +48,6 @@ status_t readBootBlock(BootBlock *bootBlock) {
             bootBlock->physical_drive_number = bootBlockReader.physical_drive_number;
             bootBlock->extended_boot_record_signature = bootBlockReader.extended_boot_record_signature;
         }
-        fclose(f);
     } else {
         status = ERROR_NULL_FILE;
     }
@@ -55,6 +55,7 @@ status_t readBootBlock(BootBlock *bootBlock) {
     return status;
 }
 void printBootBlock(const BootBlock *bootBlock) {
+
     if (bootBlock == NULL) {
         printf("BootBlock is NULL\n");
         return;
@@ -122,4 +123,47 @@ void printBootBlock(const BootBlock *bootBlock) {
 
     /*Print boot signature*/
     printf("Boot Signature: 0x%04X\n", bootBlock->boot_signature);
+}
+
+status_t verifyFATTable(BootBlock *bootBlock, FILE *f) {
+    uint8_t numFAT = bootBlock->num_fat;
+    uint32_t sizeOfFAT = bootBlock->blocks_per_fat * bootBlock->bytes_per_block;
+    uint32_t offset = bootBlock->bytes_per_block;
+    status_t status = OK; 
+
+    if (numFAT < 2) {
+        return OK;
+    }
+
+    // Read the first FAT as a reference
+    uint8_t *fatReference = (uint8_t *)malloc(sizeOfFAT);
+    if (fatReference == NULL) {
+        return ERROR;
+    }
+    
+    fseek(f, offset, SEEK_SET);
+    fread(fatReference, 1, sizeOfFAT, f);
+
+    // Compare with each additional FAT
+    for (uint8_t i = 1; i < numFAT; i++) {
+        uint8_t *currentFAT = (uint8_t *)malloc(sizeOfFAT);
+        if (currentFAT == NULL) {
+            status = ERROR;
+            break;
+        }
+
+        fseek(f, offset + (i * sizeOfFAT), SEEK_SET);
+        fread(currentFAT, 1, sizeOfFAT, f);
+
+        // Compare the current FAT with the reference FAT
+        if (memcmp(fatReference, currentFAT, sizeOfFAT) != 0) {
+            status = ERROR;
+            free(currentFAT);
+            break;  
+        }
+        free(currentFAT);
+    }
+    
+    free(fatReference);
+    return status; 
 }
