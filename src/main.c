@@ -48,7 +48,7 @@ int main()
 
    /* Initialize the state to browse the root folder */
    State_t state = INFOLDER;
-   char current_path[256] = "/";
+   char current_path[256] = "~";
 
    /* Load and print entries in the root folder */
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
@@ -61,7 +61,8 @@ int main()
 
    while (state != EXIT)
    {
-      printf("%s> ", current_path);
+      showPrompt("root@fsoft-mygroup:");
+      printf("%s$ ", current_path);
       fgets(command, sizeof(command), stdin);
 
       /* =========================================== cd ==============================================*/
@@ -87,19 +88,7 @@ int main()
             {
                if (removeFile(dirEntries[found], adroot, found, f) == OK)
                {
-                  // if (dirEntries[found].startingCluster == 0)
-                  // {
-                  //    adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
-                  //    numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
-                  // }
-                  // else
-                  // {
-                  //    adroot = addata + dirEntries[found].startingCluster * boot.bytes_per_block;
-                  //    numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
-                  // }
-                  // print_allentri(dirEntries, numEntry);
                   notifySuccess("\nRemove file successfully\n");
-
                }
                else
                {
@@ -114,7 +103,7 @@ int main()
                   setColor(GREEN, BLACK);
                   displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
                   setColor(WHITE, BLACK);
-                  printf("\n>'back' to clean and show last view:\n");
+                  printf("\n>'back' to exit file\n");
                }
                else if (dirEntries[found].attributes == 0x10)
                {
@@ -122,7 +111,7 @@ int main()
                   {
                      adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
                      numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
-                     strcpy(current_path, "/");
+                     strcpy(current_path, "~");
                   }
                   else
                   {
@@ -132,9 +121,26 @@ int main()
                      /*update current path*/
                      char temp_name[9];
                      sanitizeFilename(dirEntries[found].filename, temp_name, 8);
-                     strcat(current_path, temp_name);
-                     strcat(current_path, "/");
+                     if (strcmp(temp_name, "..") == 0)
+                     {
+                        char *lastSlash = strrchr(current_path, '/');
+                        if (lastSlash != NULL && lastSlash != current_path)
+                        {
+                           *lastSlash = '\0';
+                           strcat(current_path, "/");
+                        }
+                        else
+                        {
+                           strcpy(current_path, "/");
+                        }
+                     }
+                     else if (strcmp(temp_name, ".") != 0)
+                     {
+                        strcat(current_path, "/");
+                        strcat(current_path, temp_name);
+                     }
                   }
+                  clearConsole();
                   print_allentri(dirEntries, numEntry);
                }
             }
