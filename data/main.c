@@ -42,10 +42,10 @@ int main()
    }
 
    /* Calculate addresses for data and root directory based on FAT configuration */
-   uint32_t addata = (boot.blocks_per_fat * boot.num_fat +
+   uint32_t fatDataOffset = (boot.blocks_per_fat * boot.num_fat +
                       boot.num_root_dir_entries * 32 / boot.bytes_per_block - 1) *
                      boot.bytes_per_block;
-   uint32_t adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+   uint32_t rootDirectoryLocation = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
 
    /* Initialize the state to browse the root folder */
    State_t state = INFOLDER;
@@ -53,7 +53,7 @@ int main()
 
    /* Load and print entries in the root folder */
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
-   uint8_t numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+   uint8_t numEntry = rerootDirectoryLocationEntry(f, dirEntries, boot.num_root_dir_entries, rootDirectoryLocation);
    print_allentri(dirEntries, numEntry);
    printFooter();
 
@@ -94,14 +94,14 @@ int main()
                if (dirEntries[choice - 1].startingCluster == 0)
                {
                   /* Root folder special case */
-                  adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
-                  numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+                  rootDirectoryLocation = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+                  numEntry = rerootDirectoryLocationEntry(f, dirEntries, boot.num_root_dir_entries, rootDirectoryLocation);
                }
                else
                {
                   /* Regular subfolder, calculate its starting address */
-                  adroot = addata + dirEntries[choice - 1].startingCluster * boot.bytes_per_block;
-                  numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
+                  rootDirectoryLocation = fatDataOffset + dirEntries[choice - 1].startingCluster * boot.bytes_per_block;
+                  numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, rootDirectoryLocation);
                }
                /* Print all entries within the selected folder */
                print_allentri(dirEntries, numEntry);

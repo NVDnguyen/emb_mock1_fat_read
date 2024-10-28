@@ -1,7 +1,25 @@
 #include "fat_data_explorer.h"
 #include <string.h>
 #include <stdio.h>
-
+uint32_t getEndOfClusterMarker(const char *filesystem_identifier)
+{
+    if (isFilesystemType(filesystem_identifier, FAT12))
+    {
+        return 0xFF8;
+    }
+    else if (isFilesystemType(filesystem_identifier, FAT16))
+    {
+        return 0xFFF8;
+    }
+    else if (isFilesystemType(filesystem_identifier, FAT32))
+    {
+        return 0xFFFFFF8;
+    }
+    else
+    {
+        return 0; // Indicate invalid filesystem
+    }
+}
 uint8_t isFilesystemType(const char *identifier, const char *type)
 {
     return strncmp(identifier, type, 5) == 0;
@@ -86,24 +104,12 @@ uint32_t NextIndexCluster_FAT(uint32_t cluster, uint32_t fatStartOffset, const c
 void displayDataInFile(uint32_t startCluster, FILE *f, BootBlock bootBlock, uint16_t fileSize)
 {
 
-    uint32_t endOfClusterMarker;
-
-    if (isFilesystemType(bootBlock.filesystem_identifier, FAT12))
-    {
-        endOfClusterMarker = 0xFF8;
-    }
-    else if (isFilesystemType(bootBlock.filesystem_identifier, FAT16))
-    {
-        endOfClusterMarker = 0xFFF8;
-    }
-    else if (isFilesystemType(bootBlock.filesystem_identifier, FAT32))
-    {
-        endOfClusterMarker = 0xFFFFFF8;
-    }
-    else
+    uint32_t endOfClusterMarker = getEndOfClusterMarker(bootBlock.filesystem_identifier);
+    if (endOfClusterMarker == 0)
     {
         return;
     }
+
     /**/
     uint16_t dataBlockStartOffset =
         (bootBlock.num_fat * bootBlock.blocks_per_fat + 1) * bootBlock.bytes_per_block +
@@ -218,9 +224,10 @@ void print_allentri(DirectoryEntry *arrentri, uint16_t size)
 
     for (int i = 0; i < size; i++)
     {
-        if (arrentri[i].filename[0] != 0 && arrentri[i].filename[0] != 0xe5 && arrentri[i].attributes != 0x0f)
+        uint8_t firstB = (uint8_t)arrentri[i].filename[0];
+
+        if (firstB != 0 && firstB != 0xE5 && arrentri[i].attributes != 0x0f )
         {
-            //printf("%-8d", i + 1); // In chỉ số
             print_directory_entry(&arrentri[i]);
         }
     }
@@ -258,40 +265,71 @@ void printAttributes(uint8_t attributes)
         break;
     }
 }
-
-status_t removeFile(DirectoryEntry dir, uint32_t offSet, uint16_t indexCluster, FILE *f)
+status_t removeFile(DirectoryEntry *dir, uint32_t dirOffset, uint16_t indexCluster, FILE *f, BootBlock *boot)
 {
-    if (f == NULL) {
+    if (f == NULL)
+    {
         return ERROR_NULL_FILE;
     }
-
-    if (fseek(f, offSet + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0) {
-        return ERROR_READ; 
+    if (fseek(f, dirOffset + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0)
+    {
+        return ERROR_READ;
     }
 
-    dir.filename[0] = 0x00;
+    /*Mark the file as deleted in the directory entry*/
+    dir->filename[0] = 0xE5;
 
-    if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1) {
-        return ERROR; 
+    if (fwrite(dir, sizeof(DirectoryEntry), 1, f) != 1)
+    {
+        return ERROR_WRITE;
     }
 
-    return OK; 
+    uint32_t firstCluster = dir->startingCluster;
+    if (firstCluster != 0)
+    {
+        uint32_t fatStartOffset = boot->bytes_per_block;
+
+        /*Iterate over each FAT table to mark the cluster as free*/
+        for (int i = 0; i < boot->num_fat; i++)
+        {
+            uint32_t fatOffsetForCluster = fatStartOffset + (i * boot->blocks_per_fat * boot->bytes_per_block);
+
+            /*Seek to the location of the first cluster in the FAT*/
+            if (fseek(f, fatOffsetForCluster + NextIndexCluster_FAT(firstCluster, fatStartOffset, boot->filesystem_identifier), SEEK_SET) != 0)
+            {
+                return ERROR_READ;
+            }
+
+            /*Write a zero value to mark the cluster as free*/
+            uint32_t freeCluster = 0x00000000;
+            if (fwrite(&freeCluster, sizeof(uint32_t), 1, f) != 1)
+            {
+                return ERROR_WRITE;
+            }
+        }
+    }
+
+    return OK;
 }
 
-status_t makeDir(uint32_t offSet, uint16_t indexCluster,FILE *f){
-    if (f == NULL) {
+status_t makeDir(uint32_t offSet, uint16_t indexCluster, FILE *f)
+{
+    if (f == NULL)
+    {
         return ERROR_NULL_FILE;
     }
 
-    if (fseek(f, offSet + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0) {
-        return ERROR_READ; 
+    if (fseek(f, offSet + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0)
+    {
+        return ERROR_READ;
     }
 
     DirectoryEntry dir;
 
-    if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1) {
-        return ERROR; 
+    if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1)
+    {
+        return ERROR;
     }
 
-    return OK; 
+    return OK;
 }
