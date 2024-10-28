@@ -8,11 +8,12 @@
 #include "console_utils.h"
 
 void sanitizeFilename(char *raw_name, char *clean_name, int length);
+int findEntry(DirectoryEntry *dirEntries, int numEntry, const char *dir_name);
 
 int main()
 {
    /* Open the file system image in binary read mode */
-   FILE *f = fopen(FILE_PATH, "rb+");
+   FILE *f = fopen(FILE_PATH1, "rb+");
    if (f == NULL)
    {
       notifyError("\nFailed to open the file.\n");
@@ -47,19 +48,18 @@ int main()
    uint32_t adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
 
    /* Initialize the state to browse the root folder */
-   State_t state = INFOLDER;
    char current_path[256] = "~";
 
    /* Load and print entries in the root folder */
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
-   uint8_t numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+   uint8_t numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, adroot);
    print_allentri(dirEntries, numEntry);
-   printFooter();
+   printIntruction();
 
    /* Display initial control instructions */
    char command[100];
 
-   while (state != EXIT)
+   while (1)
    {
       showPrompt("root@fsoft-mygroup:");
       printf("%s$ ", current_path);
@@ -70,17 +70,7 @@ int main()
       {
          char *dir_name = command + 3;
          dir_name[strcspn(dir_name, "\n")] = 0;
-         int found = -1;
-         for (int i = 0; i < numEntry; i++)
-         {
-            char temp_name[9];
-            sanitizeFilename(dirEntries[i].filename, temp_name, 8);
-            if (strcmp(temp_name, dir_name) == 0)
-            {
-               found = i;
-               break;
-            }
-         }
+         int found = findEntry(dirEntries, numEntry, dir_name);
 
          if (found != -1)
          {
@@ -99,25 +89,21 @@ int main()
             {
                if (dirEntries[found].attributes == 0x0)
                {
-                  clearConsole();
-                  setColor(GREEN, BLACK);
-                  displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
-                  setColor(WHITE, BLACK);
-                  printf("\n>'back' to exit file\n");
+                  notifyWarning("Not directory! Use nano to open this file.");
                }
                else if (dirEntries[found].attributes == 0x10)
                {
                   if (dirEntries[found].startingCluster == 0)
                   {
                      adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
-                     numEntry = readRootEntry(f, dirEntries, boot.num_root_dir_entries, adroot);
+                     numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, adroot);
                      strcpy(current_path, "~");
                   }
                   else
                   {
 
                      adroot = addata + dirEntries[found].startingCluster * boot.bytes_per_block;
-                     numEntry = readFolder(f, dirEntries, boot.bytes_per_block / 32, adroot);
+                     numEntry = readFolder(f, dirEntries, boot.bytes_per_block /32, adroot);
                      /*update current path*/
                      char temp_name[9];
                      sanitizeFilename(dirEntries[found].filename, temp_name, 8);
@@ -147,17 +133,54 @@ int main()
          }
          else
          {
-            printf("Folder not found: %s\n", dir_name);
+            notifyWarning("Folder not found !!");
          }
       }
+      /* =========================================== nano ==============================================*/
+      else if (strncmp(command, "nano ", 5) == 0)
+      {
+         char *dir_name = command + 5;
+         dir_name[strcspn(dir_name, "\n")] = 0;
+         int found = findEntry(dirEntries, numEntry, dir_name);
+
+         if (found != -1)
+         {
+            if (dirEntries[found].attributes == 0x0)
+            {
+               clearConsole();
+               setColor(GREEN, BLACK);
+               displayDataInFile(dirEntries[found].startingCluster, f, boot, dirEntries[found].fileSize);
+               setColor(WHITE, BLACK);
+               printf("\n>'back' to exit file\n");
+            }
+            else
+            {
+               notifyWarning("It is not a file to open !!");
+            }
+         }
+      }
+      /* =========================================== help ==============================================*/
+      else if (strcmp(command, "help\n") == 0)
+      {
+         printIntruction();
+      }
+      /* =========================================== clean ==============================================*/
       else if (strcmp(command, "clean\n") == 0 || strcmp(command, "back\n") == 0)
       {
          clearConsole();
          print_allentri(dirEntries, numEntry);
       }
+      /* =========================================== exit ==============================================*/
       else if (strcmp(command, "exit\n") == 0)
       {
-         state = EXIT;
+         break;
+      }
+      /* =========================================== create  ==============================================*/
+      else if (strncmp(command, "mkdir ", 6) == 0)
+      {
+         char *dir_name = command + 6;
+         dir_name[strcspn(dir_name, "\n")] = 0;
+         
       }
    }
    fclose(f);
@@ -172,4 +195,17 @@ void sanitizeFilename(char *raw_name, char *clean_name, int length)
    {
       clean_name[i] = '\0';
    }
+}
+int findEntry(DirectoryEntry *dirEntries, int numEntry, const char *dir_name)
+{
+   for (int i = 0; i < numEntry; i++)
+   {
+      char temp_name[9];
+      sanitizeFilename(dirEntries[i].filename, temp_name, 8);
+      if (strcmp(temp_name, dir_name) == 0)
+      {
+         return i;
+      }
+   }
+   return -1;
 }

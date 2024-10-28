@@ -271,7 +271,24 @@ status_t removeFile(DirectoryEntry dir, uint32_t offSet, uint16_t indexCluster, 
 
     dir.filename[0] = 0x00;
 
-    // Ghi lại DirectoryEntry đã cập nhật
+    if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1) {
+        return ERROR; 
+    }
+
+    return OK; 
+}
+
+status_t makeDir(uint32_t offSet, uint16_t indexCluster,FILE *f){
+    if (f == NULL) {
+        return ERROR_NULL_FILE;
+    }
+
+    if (fseek(f, offSet + indexCluster * sizeof(DirectoryEntry), SEEK_SET) != 0) {
+        return ERROR_READ; 
+    }
+
+    DirectoryEntry dir;
+
     if (fwrite(&dir, sizeof(DirectoryEntry), 1, f) != 1) {
         return ERROR; 
     }
