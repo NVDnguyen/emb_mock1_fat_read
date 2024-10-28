@@ -20,24 +20,7 @@ ParseDate parseDateFromUint16(uint16_t rawDate)
     date.day = rawDate & 0x1F;
     return date;
 }
-uint8_t readRootEntry(FILE *f, DirectoryEntry *dirEntries, uint16_t num_root_dir_entries, uint32_t adroot)
-{
-    uint8_t j = 0; /*real dir*/
-    if (f != NULL)
-    {
-        fseek(f, adroot, SEEK_SET);
 
-        for (uint8_t i = 0; i < num_root_dir_entries; i++)
-        {
-            DirectoryEntry dir;
-            fread(&dir, sizeof(DirectoryEntry), 1, f);
-
-            (dirEntries)[j] = dir;
-            j++;
-        }
-    }
-    return j;
-}
 
 uint8_t readFolder(FILE *f, DirectoryEntry *arr, uint16_t rootEntryCount, uint32_t rootDirByteOffset)
 {

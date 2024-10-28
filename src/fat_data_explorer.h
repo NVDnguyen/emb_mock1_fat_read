@@ -21,6 +21,7 @@ void printAttributes(uint8_t attributes);
 
 /*remove*/
 status_t removeFile(DirectoryEntry dri ,uint32_t offSet, uint16_t indexCluster,FILE *f);
+status_t makeDir(uint32_t offSet, uint16_t indexCluster,FILE *f);
 
 
 #endif   /*__PARSEDATA_H__ */
