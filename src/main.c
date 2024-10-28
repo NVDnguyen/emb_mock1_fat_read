@@ -13,7 +13,7 @@ int findEntry(DirectoryEntry *dirEntries, int numEntry, const char *dir_name);
 int main()
 {
    /* Open the file system image in binary read mode */
-   FILE *f = fopen(FILE_PATH1, "rb+");
+   FILE *f = fopen(FILE_PATH, "rb+");
    if (f == NULL)
    {
       notifyError("\nFailed to open the file.\n");
@@ -42,17 +42,18 @@ int main()
    }
 
    /* Calculate addresses for data and root directory based on FAT configuration */
-   uint32_t addata = (boot.blocks_per_fat * boot.num_fat +
+   uint32_t fatDataOffset = (boot.blocks_per_fat * boot.num_fat +
                       boot.num_root_dir_entries * 32 / boot.bytes_per_block - 1) *
                      boot.bytes_per_block;
-   uint32_t adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+                     
+   uint32_t rootDirectoryLocation = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
 
    /* Initialize the state to browse the root folder */
    char current_path[256] = "~";
 
    /* Load and print entries in the root folder */
    DirectoryEntry dirEntries[boot.num_root_dir_entries];
-   uint8_t numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, adroot);
+   uint8_t numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, rootDirectoryLocation);
    print_allentri(dirEntries, numEntry);
    printIntruction();
 
@@ -76,7 +77,8 @@ int main()
          {
             if (strncmp(command, "rm ", 3) == 0)
             {
-               if (removeFile(dirEntries[found], adroot, found, f) == OK)
+             
+               if (removeFile(&dirEntries[found], rootDirectoryLocation, found, f,&boot) == OK)
                {
                   notifySuccess("\nRemove file successfully\n");
                }
@@ -95,15 +97,15 @@ int main()
                {
                   if (dirEntries[found].startingCluster == 0)
                   {
-                     adroot = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
-                     numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, adroot);
+                     rootDirectoryLocation = (boot.num_fat * boot.blocks_per_fat + 1) * boot.bytes_per_block;
+                     numEntry = readFolder(f, dirEntries, boot.num_root_dir_entries, rootDirectoryLocation);
                      strcpy(current_path, "~");
                   }
                   else
                   {
 
-                     adroot = addata + dirEntries[found].startingCluster * boot.bytes_per_block;
-                     numEntry = readFolder(f, dirEntries, boot.bytes_per_block /32, adroot);
+                     rootDirectoryLocation = fatDataOffset + dirEntries[found].startingCluster * boot.bytes_per_block;
+                     numEntry = readFolder(f, dirEntries, boot.bytes_per_block /32, rootDirectoryLocation);
                      /*update current path*/
                      char temp_name[9];
                      sanitizeFilename(dirEntries[found].filename, temp_name, 8);

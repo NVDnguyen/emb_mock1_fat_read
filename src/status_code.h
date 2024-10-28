@@ -11,7 +11,8 @@ typedef enum
     ERROR_MEMORY_ALLOCATION,
     ERROR_UNSUPPORT_FILE_SYSTEM,
     OK_FAT,
-    ERROR_FAT
+    ERROR_FAT,
+    ERROR_WRITE,
 } status_t;
 typedef enum State_t
 {
@@ -30,7 +31,10 @@ static const char* status_strings[] = {
     "ERROR_NULL_FILE",
     "ERROR_READ",
     "ERROR_MEMORY_ALLOCATION",
-    "ERROR_UNSUPPORT_FILE_SYSTEM"
+    "ERROR_UNSUPPORT_FILE_SYSTEM",
+    "OK_FAT",
+    "ERROR_FAT",
+    "ERROR_WRITE"
 };
 typedef enum
 {

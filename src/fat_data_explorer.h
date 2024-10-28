@@ -20,8 +20,8 @@ void print_allentri( DirectoryEntry *arrentri,uint16_t size);
 void printAttributes(uint8_t attributes);
 
 /*remove*/
-status_t removeFile(DirectoryEntry dri ,uint32_t offSet, uint16_t indexCluster,FILE *f);
 status_t makeDir(uint32_t offSet, uint16_t indexCluster,FILE *f);
+status_t removeFile(DirectoryEntry *dir, uint32_t dirOffset, uint16_t indexCluster, FILE *f, BootBlock *boot);
 
 
 #endif   /*__PARSEDATA_H__ */
